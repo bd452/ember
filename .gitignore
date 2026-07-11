@@ -1,0 +1,15 @@
+__pycache__
+/index.html
+.venv
+.DS_Store
+.kpm/
+apps/*/dist/
+apps/*/package/bin/
+apps/*/package/lib/
+apps/*/package/include/
+apps/*/package/tweaks/**/tweak.so
+apps/*/package/diagnostics/**/tweak.so
+/target/
+/target-kindle/
+.cursor/
+/docs/extraction-history.md
