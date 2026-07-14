@@ -8,7 +8,7 @@
 
 use crate::component::Component;
 use crate::render::Color;
-use crate::widget::{Align, AnyWidget, Axis, Button, Label, Spacer, Stack};
+use crate::widget::{Align, AnyWidget, Axis, BookCard, Button, Label, Spacer, Stack, TabBar};
 
 /// A description of a subtree, consumed at mount time.
 pub enum Node {
@@ -58,6 +58,8 @@ macro_rules! into_node_widget {
 }
 into_node_widget!(Label, Label);
 into_node_widget!(Button, Button);
+into_node_widget!(BookCard, BookCard);
+into_node_widget!(TabBar, TabBar);
 into_node_widget!(Spacer, Spacer);
 into_node_widget!(Stack, Stack);
 

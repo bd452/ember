@@ -12,15 +12,19 @@ use std::cell::Cell;
 use crate::geometry::{Point, Rect, Size};
 use crate::render::DrawCmd;
 
+pub mod book_card;
 pub mod button;
 pub mod label;
 pub mod spacer;
 pub mod stack;
+pub mod tab_bar;
 
+pub use book_card::BookCard;
 pub use button::Button;
 pub use label::Label;
 pub use spacer::Spacer;
 pub use stack::Stack;
+pub use tab_bar::TabBar;
 
 /// Font cell metrics for the FBInk built-in font at size multiplier 1. Layout
 /// and the FBInk renderer share these so measured rectangles line up with what
@@ -101,6 +105,8 @@ pub enum Axis {
 pub enum AnyWidget {
     Label(Label),
     Button(Button),
+    BookCard(BookCard),
+    TabBar(TabBar),
     Stack(Stack),
     Spacer(Spacer),
 }
@@ -110,6 +116,8 @@ impl AnyWidget {
         match self {
             AnyWidget::Label(w) => w.0.borrow().common.id,
             AnyWidget::Button(w) => w.0.borrow().common.id,
+            AnyWidget::BookCard(w) => w.0.borrow().common.id,
+            AnyWidget::TabBar(w) => w.0.borrow().common.id,
             AnyWidget::Stack(w) => w.0.borrow().common.id,
             AnyWidget::Spacer(w) => w.0.borrow().common.id,
         }
@@ -119,6 +127,8 @@ impl AnyWidget {
         match self {
             AnyWidget::Label(w) => w.0.borrow().common.frame,
             AnyWidget::Button(w) => w.0.borrow().common.frame,
+            AnyWidget::BookCard(w) => w.0.borrow().common.frame,
+            AnyWidget::TabBar(w) => w.0.borrow().common.frame,
             AnyWidget::Stack(w) => w.0.borrow().common.frame,
             AnyWidget::Spacer(w) => w.0.borrow().common.frame,
         }
@@ -128,6 +138,8 @@ impl AnyWidget {
         match self {
             AnyWidget::Label(w) => w.0.borrow_mut().common.frame = r,
             AnyWidget::Button(w) => w.0.borrow_mut().common.frame = r,
+            AnyWidget::BookCard(w) => w.0.borrow_mut().common.frame = r,
+            AnyWidget::TabBar(w) => w.0.borrow_mut().common.frame = r,
             AnyWidget::Stack(w) => w.0.borrow_mut().common.frame = r,
             AnyWidget::Spacer(w) => w.0.borrow_mut().common.frame = r,
         }
@@ -137,6 +149,8 @@ impl AnyWidget {
         match self {
             AnyWidget::Label(w) => w.0.borrow().common.dirty,
             AnyWidget::Button(w) => w.0.borrow().common.dirty,
+            AnyWidget::BookCard(w) => w.0.borrow().common.dirty,
+            AnyWidget::TabBar(w) => w.0.borrow().common.dirty,
             AnyWidget::Stack(w) => w.0.borrow().common.dirty,
             AnyWidget::Spacer(w) => w.0.borrow().common.dirty,
         }
@@ -146,6 +160,8 @@ impl AnyWidget {
         match self {
             AnyWidget::Label(w) => w.0.borrow_mut().common.dirty = false,
             AnyWidget::Button(w) => w.0.borrow_mut().common.dirty = false,
+            AnyWidget::BookCard(w) => w.0.borrow_mut().common.dirty = false,
+            AnyWidget::TabBar(w) => w.0.borrow_mut().common.dirty = false,
             AnyWidget::Stack(w) => w.0.borrow_mut().common.dirty = false,
             AnyWidget::Spacer(w) => w.0.borrow_mut().common.dirty = false,
         }
@@ -157,6 +173,8 @@ impl AnyWidget {
         match self {
             AnyWidget::Label(w) => w.0.borrow().measure(),
             AnyWidget::Button(w) => w.0.borrow().measure(),
+            AnyWidget::BookCard(w) => w.0.borrow().measure(avail),
+            AnyWidget::TabBar(w) => w.0.borrow().measure(avail),
             AnyWidget::Spacer(w) => w.0.borrow().measure(),
             AnyWidget::Stack(w) => stack::measure(&w.0.borrow(), avail),
         }
@@ -180,6 +198,8 @@ impl AnyWidget {
         match self {
             AnyWidget::Label(w) => w.0.borrow().paint(out),
             AnyWidget::Button(w) => w.0.borrow().paint(out),
+            AnyWidget::BookCard(w) => w.0.borrow().paint(out),
+            AnyWidget::TabBar(w) => w.0.borrow().paint(out),
             AnyWidget::Spacer(_) => {}
             AnyWidget::Stack(w) => w.0.borrow().paint(out),
         }
@@ -188,10 +208,18 @@ impl AnyWidget {
     /// Invokes the tap handler if this widget is an interactive one. Returns
     /// true if a handler ran.
     pub fn dispatch_tap(&self) -> bool {
-        if let AnyWidget::Button(w) = self {
-            return w.fire_tap();
+        match self {
+            AnyWidget::Button(w) => w.fire_tap(),
+            AnyWidget::BookCard(w) => w.fire_tap(),
+            _ => false,
         }
-        false
+    }
+
+    pub fn dispatch_tap_at(&self, point: Point) -> bool {
+        match self {
+            AnyWidget::TabBar(w) => w.fire_tap_at(point),
+            _ => self.dispatch_tap(),
+        }
     }
 }
 
@@ -216,7 +244,10 @@ pub fn hit_test(root: &AnyWidget, p: Point) -> Option<AnyWidget> {
             return Some(hit);
         }
     }
-    if matches!(root, AnyWidget::Button(_)) {
+    if matches!(
+        root,
+        AnyWidget::Button(_) | AnyWidget::BookCard(_) | AnyWidget::TabBar(_)
+    ) {
         return Some(root.clone());
     }
     None

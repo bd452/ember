@@ -17,7 +17,8 @@ Import the common surface:
 ```rust
 use ember::{
     for_each, hstack, slot, vstack, Align, Axis, BuildCtx, Button, Color,
-    Component, ExitHandle, IntoNode, Label, Node, Signal, Spacer,
+    BookCard, Component, ExitHandle, IntoNode, Label, Node, Signal, Spacer,
+    TabBar,
 };
 ```
 
@@ -95,6 +96,42 @@ Button::new(" + ")
     .size(3)
     .on_tap(move || count.update(|v| v + 1))
 ```
+
+### BookCard
+
+A tappable cover card for library and reading surfaces. Cover pixels are
+row-major 8-bit grayscale; invalid dimensions are rejected rather than passed
+to the framebuffer backend.
+
+```rust
+let card = BookCard::new("The Left Hand of Darkness")
+    .subtitle("Ursula K. Le Guin")
+    .progress(42)
+    .cover(width, height, grayscale_pixels)
+    .on_tap(|| open_book());
+
+// Reactive updates after mount:
+card.set_progress(Some(55));
+assert!(card.set_cover(width, height, new_grayscale_pixels));
+```
+
+Use `.horizontal()` for a cover-leading list row and `.featured()` for a
+larger card. Ember retains the pixel buffer; decoding and network fetches stay
+in the host application.
+
+### TabBar
+
+An equal-width bottom navigation control with a selection indicator and
+Kindle-friendly touch height.
+
+```rust
+let tabs = TabBar::new(["Reading", "Library", "Account"], 0)
+    .on_select(|index| select_screen(index));
+
+tabs.set_active(1); // also marks the widget dirty
+```
+
+Tapping a tab updates its active indicator before invoking `on_select`.
 
 ### Spacer
 

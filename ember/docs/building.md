@@ -21,7 +21,7 @@ toolchain.
 
 ```
 <repo>/
-  Dockerfile                # kinstaller-build image (Ubuntu + Rust + kox + clang)
+  Dockerfile                # thin image over the pinned KPM build environment
 
     Cargo.toml              # workspace: fbink-sys, ember, ember-demo
     Cargo.lock              # committed
@@ -34,8 +34,8 @@ toolchain.
   apps/com.bd452.emberdemo/        # KPM package → demo (+ README)
   scripts/koxtoolchain.sh              # platform → prefix / Rust triple / PATH
   scripts/setup-koxtoolchain.sh        # download toolchains (Linux only)
-  scripts/build-in-container.sh        # macOS/dev: run builds in kinstaller-build
-  scripts/build-repo.sh                # ./build.sh entry → all packages
+  scripts/build-in-container.sh        # macOS/dev: run builds in ember-build
+  build.sh                              # build + verify both packages
 ```
 
 ## Prerequisites
@@ -43,9 +43,9 @@ toolchain.
 ### All platforms (host work)
 
 - Git
-- Rust stable (`rustup`):
+- Rust 1.96.1 (`rustup`, pinned by `rust-toolchain.toml`):
   ```sh
-  rustup toolchain install stable
+  rustup toolchain install 1.96.1
   # optional until you cross-compile:
   rustup target add armv7-unknown-linux-gnueabihf armv7-unknown-linux-gnueabi
   ```
@@ -75,8 +75,8 @@ toolchain.
 FBInk is a **git submodule**. Without it, any `--features fbink` build fails.
 
 ```sh
-git clone --recurse-submodules https://github.com/bd452/kinstaller-repo.git
-cd kinstaller-repo
+git clone --recurse-submodules https://github.com/bd452/ember.git
+cd ember
 
 # If you already cloned without submodules:
 git submodule update --init --recursive
@@ -160,7 +160,7 @@ when invoked from the repo root with `--manifest-path`.
 When `--features fbink` is enabled, `fbink-sys/build.rs`:
 
 1. Asserts the FBInk submodule exists.
-2. Runs `make clean` then `make pic KINDLE=true MINIMAL=1 DRAW=1 BITMAP=1 CROSS_TC=…`
+2. Runs `make clean` then `make pic KINDLE=true MINIMAL=1 DRAW=1 BITMAP=1 IMAGE=1 CROSS_TC=…`
    in `apps/com.bd452.fbink/vendor/FBInk`.
 3. Copies `Release/libfbink.a` into Cargo's `OUT_DIR` and links that stable
    copy (+ `libm`).
@@ -218,7 +218,7 @@ One-time setup:
 ```sh
 git submodule update --init --recursive
 ./scripts/setup-koxtoolchain.sh
-rustup toolchain install stable
+rustup toolchain install 1.96.1
 rustup target add armv7-unknown-linux-gnueabihf armv7-unknown-linux-gnueabi
 sudo apt-get install -y clang llvm-dev libclang-dev   # if not already
 ```
@@ -296,32 +296,33 @@ make -C apps/com.bd452.fbink/vendor/FBInk clean
 
 ## 5. Cross-build with Docker (macOS and recommended for agents)
 
-This is the path we use day-to-day on macOS. The repo ships a
-[`Dockerfile`](../../../Dockerfile) that produces the **`kinstaller-build`**
-image: Ubuntu 24.04, build tools, **clang/libclang** (bindgen), Rust stable +
-both ARM targets, and both kox toolchains under `/opt/x-tools`.
+This is the path we use day-to-day on macOS. The repo ships a thin
+[`Dockerfile`](../../../Dockerfile) based on the immutable
+`ghcr.io/bd452/kindle-kpm-build:v0.1.0` digest. The shared image contains
+Ubuntu 24.04, **clang/libclang**, Rust 1.96.1, both ARM targets, `kpm-dev`, and
+both kox toolchains under `/opt/x-tools`.
 
 ### Build the image (once)
 
 From the **repo root** (always force amd64 on Apple Silicon):
 
 ```sh
-docker build --platform linux/amd64 -t kinstaller-build .
+docker build --platform linux/amd64 -t ember-build:kpm-devkit-0.1.0 .
 ```
 
-Takes several minutes the first time (apt + rustup + toolchain tarballs).
-Reuse `kinstaller-build:latest` afterward.
+The first pull may take a few minutes. Reuse
+`ember-build:kpm-devkit-0.1.0` afterward.
 
 The helper also checks that the local image contains the expected build
 prerequisites (`clang`, `libclang`, and `rustfmt`). If an older
-`kinstaller-build:latest` is missing them, it rebuilds from the repo
+`ember-build:kpm-devkit-0.1.0` is missing them, it rebuilds from the repo
 `Dockerfile` before running your command.
 
 Image contract (do not guess paths):
 
 | Item | Value |
 |------|--------|
-| Tag | `kinstaller-build:latest` (override with `KINSTALLER_BUILD_IMAGE`) |
+| Tag | `ember-build:kpm-devkit-0.1.0` (override with `EMBER_BUILD_IMAGE`) |
 | Platform | `linux/amd64` |
 | `KOXTOOLCHAIN_ROOT` | `/opt/x-tools` |
 | gcc (kindlehf) | `/opt/x-tools/x-tools/arm-kindlehf-linux-gnueabihf/bin/arm-kindlehf-linux-gnueabihf-gcc` |
@@ -380,7 +381,7 @@ docker run --rm --platform linux/amd64 \
   -e KOXTOOLCHAIN_ROOT=/opt/x-tools \
   -e CARGO_TARGET_DIR=/repo/target-kindle \
   -w /repo \
-  kinstaller-build:latest \
+  ember-build:kpm-devkit-0.1.0 \
   apps/com.bd452.emberdemo/build.sh
 ```
 
@@ -542,4 +543,4 @@ Workspace `Cargo.toml`:
 - [Demo package README](../../../apps/com.bd452.emberdemo/README.md)
 - [Library package README](../../../apps/com.bd452.ember/README.md)
 - Repo root [README.md](../../../README.md) — KPM repository build
-- Repo [`Dockerfile`](../../../Dockerfile) — `kinstaller-build` image
+- Repo [`Dockerfile`](../../../Dockerfile) — thin `ember-build` image

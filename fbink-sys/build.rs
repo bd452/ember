@@ -37,10 +37,9 @@ fn main() {
     // --- Build FBInk as a static library ---
     // CROSS_TC (e.g. arm-kindlehf-linux-gnueabihf) is exported by the app
     // build.sh; the matching gcc must be on PATH.
-    // MINIMAL keeps the fixed-cell text path (DRAW + BITMAP) that we use via
-    // fbink_print / fbink_cls / fbink_refresh, while dropping the OpenType
-    // (FreeType) and image (zlib) code — so the static lib links against only
-    // libm, with no extra runtime deps to ship to the device.
+    // MINIMAL keeps only the paths Ember uses: fixed-cell text, drawing
+    // primitives, and raw grayscale images. IMAGE adds the in-memory scaling
+    // path used by BookCard covers without pulling in OpenType/FreeType.
     // Cargo exports DEBUG=true/false to build scripts. FBInk's Makefile keys
     // its output dir on `ifdef DEBUG` — i.e. the *presence* of the variable,
     // not its value — so leaving it set makes `make` build into Debug/ while we
@@ -69,7 +68,8 @@ fn main() {
         .arg("KINDLE=true")
         .arg("MINIMAL=1")
         .arg("DRAW=1")
-        .arg("BITMAP=1");
+        .arg("BITMAP=1")
+        .arg("IMAGE=1");
     make_env_scrub(&mut make);
     if let Ok(cross_tc) = env::var("CROSS_TC") {
         make.arg(format!("CROSS_TC={cross_tc}"));

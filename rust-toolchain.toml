@@ -1,0 +1,8 @@
+[toolchain]
+channel = "1.96.1"
+profile = "minimal"
+components = ["clippy", "rustfmt"]
+targets = [
+    "armv7-unknown-linux-gnueabi",
+    "armv7-unknown-linux-gnueabihf",
+]

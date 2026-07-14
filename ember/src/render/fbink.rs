@@ -183,6 +183,43 @@ impl FbinkRenderer {
         };
         unsafe { check(sys::fbink_cls(self.fbfd, &cfg, &r, false), "cls") }
     }
+
+    fn draw_image(&self, rect: Rect, width: i32, height: i32, pixels: &[u8]) -> io::Result<()> {
+        if width <= 0
+            || height <= 0
+            || rect.is_empty()
+            || (width as usize)
+                .checked_mul(height as usize)
+                .is_none_or(|expected| expected != pixels.len())
+        {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "invalid grayscale image dimensions or buffer length",
+            ));
+        }
+
+        let mut cfg = base_config();
+        cfg.ignore_alpha = true;
+        cfg.scaled_width = rect.w.clamp(1, i16::MAX as i32) as i16;
+        cfg.scaled_height = rect.h.clamp(1, i16::MAX as i32) as i16;
+        unsafe {
+            check(
+                sys::fbink_print_raw_data(
+                    self.fbfd,
+                    // FBInk's C signature predates const-correctness for this
+                    // input. The raw-data path does not mutate caller memory.
+                    pixels.as_ptr().cast_mut(),
+                    width,
+                    height,
+                    pixels.len(),
+                    rect.x.clamp(i16::MIN as i32, i16::MAX as i32) as i16,
+                    rect.y.clamp(i16::MIN as i32, i16::MAX as i32) as i16,
+                    &cfg,
+                ),
+                "print_raw_data",
+            )
+        }
+    }
 }
 
 impl Drop for FbinkRenderer {
@@ -211,6 +248,12 @@ impl Renderer for FbinkRenderer {
                     bg,
                     inverse,
                 } => self.draw_text(*x, *y, text, *size, *fg, *bg, *inverse)?,
+                DrawCmd::Image {
+                    rect,
+                    width,
+                    height,
+                    pixels,
+                } => self.draw_image(*rect, *width, *height, pixels)?,
             }
         }
         Ok(())
