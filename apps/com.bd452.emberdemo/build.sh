@@ -19,6 +19,7 @@ if [[ ! -f "$FBINK_SRC/Makefile" ]]; then
     exit 1
 fi
 
+rm -rf "$APP_ROOT/package/bin"
 mkdir -p "$APP_ROOT/package/bin/kindlehf" "$APP_ROOT/package/bin/kindlepw2"
 
 build_platform() {

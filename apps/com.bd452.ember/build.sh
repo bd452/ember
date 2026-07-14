@@ -19,6 +19,7 @@ if [[ ! -f "$FBINK_SRC/Makefile" ]]; then
     exit 1
 fi
 
+rm -rf "$APP_ROOT/package/lib" "$APP_ROOT/package/include"
 mkdir -p "$APP_ROOT/package/lib/kindlehf" "$APP_ROOT/package/lib/kindlepw2" \
     "$APP_ROOT/package/include"
 
