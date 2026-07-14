@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build this repo inside the kinstaller-build Docker image (linux/amd64).
+# Build this repo inside the Ember thin image over the shared KPM devkit.
 #
 # Use this on macOS (or any host that is not Linux x86_64): the KindleModding
 # koxtoolchain binaries only run on Linux amd64.
@@ -11,12 +11,12 @@
 #   ./scripts/build-in-container.sh bash -lc '…'      # custom command
 #
 # First run builds the image (several minutes: apt + rustup + toolchain tarballs).
-# Later runs reuse kinstaller-build:latest. If the local image predates this
+# Later runs reuse the versioned shared-devkit image. If the local image predates this
 # helper's expected toolchain, it is rebuilt automatically.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-IMAGE="${KINSTALLER_BUILD_IMAGE:-kinstaller-build:latest}"
+IMAGE="${EMBER_BUILD_IMAGE:-ember-build:kpm-devkit-0.1.0}"
 PLATFORM="${KINSTALLER_BUILD_PLATFORM:-linux/amd64}"
 
 cd "$REPO_ROOT"

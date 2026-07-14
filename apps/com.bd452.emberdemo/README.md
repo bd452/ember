@@ -46,7 +46,7 @@ Same as the library cross build — see
 
 1. `git submodule update --init --recursive` (FBInk under `com.bd452.fbink`)
 2. Linux x86_64 + koxtoolchain, **or** Docker/`./scripts/build-in-container.sh`
-3. Rust stable with both ARM targets (provided inside `kinstaller-build`)
+3. Rust 1.96.1 with both ARM targets (provided inside the shared KPM build image)
 
 ## Build
 
@@ -55,7 +55,7 @@ Same as the library cross build — see
 From the **repo root**:
 
 ```sh
-# Image: docker build --platform linux/amd64 -t kinstaller-build .
+# Image: docker build --platform linux/amd64 -t ember-build:kpm-devkit-0.1.0 .
 ./scripts/build-in-container.sh apps/com.bd452.emberdemo/build.sh
 ```
 

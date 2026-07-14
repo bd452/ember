@@ -17,6 +17,10 @@ an FBInk-based e-ink renderer, and a touch event loop.
 | [`fbink-sys`](fbink-sys/) | FFI to statically-linked FBInk, generated with bindgen from the vendored `apps/com.bd452.fbink/vendor/FBInk` header. Built only for the ARM cross targets. |
 | [`ember-demo`](ember-demo/) | Demo app (counter, keyed list, touch buttons). Device build under feature `fbink`; a host stub otherwise. |
 
+Ember also includes reusable Kindle-oriented `BookCard` and `TabBar` widgets.
+`BookCard` accepts validated 8-bit grayscale cover pixels and the FBInk backend
+scales them directly into the retained card surface.
+
 ## Building
 
 **Full cold-start guide** (host vs cross, macOS/Linux/Docker, deploy,
@@ -31,21 +35,26 @@ cargo run  -p ember-demo            # host stub: mounts + renders one frame
 ```
 
 **On-device** cross builds need Linux x86_64 + koxtoolchain. On macOS use the
-repo Docker image via [`scripts/build-in-container.sh`](../scripts/build-in-container.sh)
+repo Docker image via [`scripts/build-in-container.sh`](scripts/build-in-container.sh)
 (see [building.md](ember/docs/building.md) §5):
 
 ```sh
-docker build --platform linux/amd64 -t kinstaller-build .   # once
+docker build --platform linux/amd64 -t ember-build:kpm-devkit-0.1.0 . # once
 ./scripts/build-in-container.sh apps/com.bd452.emberdemo/build.sh
 ```
 
 - `apps/com.bd452.ember/build.sh` → `libember.so` + `ember.h`
-- `apps/com.bd452.emberdemo/build.sh` → demo binary ([demo README](../apps/com.bd452.emberdemo/README.md))
-- `./build.sh` at the repo root → full repo packages
+- `apps/com.bd452.emberdemo/build.sh` → demo binary ([demo README](apps/com.bd452.emberdemo/README.md))
+- `./build.sh` at the repo root → both deterministic, devkit-verified packages
 
 Targets: `armv7-unknown-linux-gnueabihf` (kindlehf),
 `armv7-unknown-linux-gnueabi` (kindlepw2). Init the FBInk submodule first
 (`git submodule update --init --recursive`).
+
+The thin repository image is pinned to
+`ghcr.io/bd452/kindle-kpm-build:v0.1.0` by immutable OCI digest. Packaging is
+performed by the sibling `kindle-kpm-devkit` checkout (or `kpm-dev` on `PATH`)
+at the version recorded in `.kpm-devkit-version`.
 
 ## C ABI
 

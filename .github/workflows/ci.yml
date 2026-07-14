@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: dtolnay/rust-toolchain@1.96.1
+        with:
+          components: rustfmt, clippy
+
+      - name: Check scripts and devkit pin
+        run: |
+          bash -n build.sh scripts/*.sh apps/com.bd452.ember/build.sh apps/com.bd452.emberdemo/build.sh
+          test "$(cat .kpm-devkit-version)" = "0.1.0"
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Lint
+        run: cargo clippy -p ember -p ember-demo --all-targets -- -D warnings
+
+      - name: Core tests
+        run: cargo test -p ember
+
+      - name: C ABI tests
+        run: cargo test -p ember --features capi
+
+      - name: Host demo smoke test
+        run: cargo run -p ember-demo
+
+  device-build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/bd452/kindle-kpm-build:v0.1.0@sha256:c7bd7e4041717bb16765b97d6fe4f578f40d144fa3628fcad81271e22f18a69b
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Trust checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Check shared devkit version
+        run: |
+          test "$(cat .kpm-devkit-version)" = "0.1.0"
+          test "$(kpm-dev --version)" = "kpm-dev 0.1.0"
+
+      - name: Build and verify packages
+        run: ./build.sh
+
+      - name: Stage package artifacts
+        run: |
+          mkdir -p dist
+          cp apps/com.bd452.ember/dist/*.kpkg dist/
+          cp apps/com.bd452.emberdemo/dist/*.kpkg dist/
+
+      - name: Generate release metadata
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          ./scripts/generate-release-metadata.sh \
+            --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}" \
+            --repository "$GITHUB_REPOSITORY" \
+            --commit "$GITHUB_SHA" \
+            --tag "$GITHUB_REF_NAME" \
+            --output dist/release-metadata.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: dist/**
+
+  release:
+    needs: [host, device-build]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: packages
+          path: dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          draft: true
+
+      - name: Publish complete immutable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false
