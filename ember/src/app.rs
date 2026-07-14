@@ -100,7 +100,7 @@ impl<R: Renderer> App<R> {
     pub fn tap_at(&mut self, point: Point) -> bool {
         let root = self.root.root();
         if let Some(target) = hit_test(&root, point) {
-            return target.dispatch_tap();
+            return target.dispatch_tap_at(point);
         }
         false
     }

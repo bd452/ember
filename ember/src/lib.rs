@@ -41,7 +41,7 @@ pub use node::{group, hstack, vstack, IntoNode, Node};
 pub use render::{Color, DrawCmd, RefreshMode, Renderer};
 pub use signal::Signal;
 pub use structural::{for_each, slot};
-pub use widget::{Align, AnyWidget, Axis, Button, Label, Spacer, Stack};
+pub use widget::{Align, AnyWidget, Axis, BookCard, Button, Label, Spacer, Stack, TabBar};
 
 /// Library version string (from `Cargo.toml`).
 pub fn version() -> &'static str {

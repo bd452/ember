@@ -7,6 +7,7 @@
 //! [`mock`] backend records commands for host tests.
 
 use crate::geometry::Rect;
+use std::rc::Rc;
 
 pub mod mock;
 
@@ -66,6 +67,15 @@ pub enum DrawCmd {
         fg: Color,
         bg: Color,
         inverse: bool,
+    },
+    /// A grayscale bitmap fitted into `rect`. `pixels` is row-major 8-bit
+    /// grayscale and is kept behind `Rc` so retained components can reuse
+    /// cached cover art without copying it every frame.
+    Image {
+        rect: Rect,
+        width: i32,
+        height: i32,
+        pixels: Rc<Vec<u8>>,
     },
 }
 

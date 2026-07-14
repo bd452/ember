@@ -17,12 +17,14 @@ use std::rc::{Rc, Weak};
 
 use crate::disposable::Disposable;
 
+type ObserverHandler<T> = Box<dyn FnMut(&T)>;
+
 /// One registered observer. Held behind an `Rc` so delivery can take a cheap
 /// snapshot of the observer set and call handlers *without* holding a borrow on
 /// the signal — handlers routinely re-enter [`Signal::set`] and may dispose
 /// themselves or other observers mid-delivery.
 struct ObserverSlot<T> {
-    handler: RefCell<Option<Box<dyn FnMut(&T)>>>,
+    handler: RefCell<Option<ObserverHandler<T>>>,
     disposed: Cell<bool>,
 }
 
@@ -70,7 +72,6 @@ impl<T: 'static> Signal<T> {
     /// mirrors `Signal.observe`; [`crate::component::BuildCtx::observe`] adds the
     /// fire-immediately behaviour). The returned [`Disposable`] removes the
     /// observer when disposed or dropped.
-    #[must_use]
     pub fn observe(&self, handler: impl FnMut(&T) + 'static) -> Disposable {
         let id = {
             let mut inner = self.inner.borrow_mut();

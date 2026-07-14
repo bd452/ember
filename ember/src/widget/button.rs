@@ -15,8 +15,8 @@ pub(crate) struct ButtonState {
     pub common: Common,
     pub title: String,
     pub size: u8,
-    pub fg: Color,
-    pub bg: Color,
+    pub surface: Color,
+    pub text: Color,
     pub on_tap: Option<Rc<dyn Fn()>>,
 }
 
@@ -28,20 +28,20 @@ impl ButtonState {
 
     pub(crate) fn paint(&self, out: &mut Vec<DrawCmd>) {
         let f = self.common.frame;
-        // Border/background: a filled rect in fg gives an inverse chip look that
-        // reads clearly on e-ink; the title is drawn inverted on top.
+        // A solid surface and explicit text color make the control predictable
+        // for both the default inverse-black style and quieter app themes.
         out.push(DrawCmd::FillRect {
             rect: f,
-            color: self.fg,
+            color: self.surface,
         });
         out.push(DrawCmd::Text {
             x: f.x + PAD_X,
             y: f.y + PAD_Y,
             text: self.title.clone(),
             size: self.size,
-            fg: self.fg,
-            bg: self.bg,
-            inverse: true,
+            fg: self.text,
+            bg: self.surface,
+            inverse: false,
         });
     }
 }
@@ -57,8 +57,8 @@ impl Button {
             common: Common::new(),
             title: title.into(),
             size: 1,
-            fg: Color::BLACK,
-            bg: Color::WHITE,
+            surface: Color::BLACK,
+            text: Color::WHITE,
             on_tap: None,
         })))
     }
@@ -66,6 +66,20 @@ impl Button {
     /// Sets the font size multiplier (builder style).
     pub fn size(self, size: u8) -> Self {
         self.0.borrow_mut().size = size.max(1);
+        self
+    }
+
+    /// Sets the button's surface and text colors (builder style).
+    ///
+    /// The Kindle renderer uses the same colors for its framebuffer adapter,
+    /// allowing app-level component systems to create quiet card surfaces
+    /// rather than being limited to the default inverse-black control.
+    pub fn colors(self, surface: Color, text: Color) -> Self {
+        let mut state = self.0.borrow_mut();
+        state.surface = surface;
+        state.text = text;
+        state.common.dirty = true;
+        drop(state);
         self
     }
 
@@ -96,5 +110,39 @@ impl Button {
         } else {
             false
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::geometry::Rect;
+
+    #[test]
+    fn custom_colors_are_emitted_without_implicit_inversion() {
+        let button = Button::new("Open").colors(Color(14), Color(2));
+        button.0.borrow_mut().common.frame = Rect::new(4, 8, 80, 40);
+
+        let mut commands = Vec::new();
+        button.0.borrow().paint(&mut commands);
+
+        assert_eq!(
+            commands,
+            vec![
+                DrawCmd::FillRect {
+                    rect: Rect::new(4, 8, 80, 40),
+                    color: Color(14),
+                },
+                DrawCmd::Text {
+                    x: 16,
+                    y: 16,
+                    text: "Open".into(),
+                    size: 1,
+                    fg: Color(2),
+                    bg: Color(14),
+                    inverse: false,
+                },
+            ]
+        );
     }
 }
